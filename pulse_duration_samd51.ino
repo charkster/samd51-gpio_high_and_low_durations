@@ -4,8 +4,15 @@
 // This program will count positive and negative edges
 // It can reliably capture 200ns high pulse positive and negative edges
 // If only one edge is wanted, it can capture 100ns pulse edges
-volatile uint32_t cc0_array [100];
-volatile uint32_t cc1_array [100];
+
+#define SerialUSB         Serial // this is needed for trinket m0
+#define PIN               2      // D2 is PA7, which is odd
+#define CLK_FREQ          200.0  // update this to the core clock frequency, in MHz
+#define SINGLE_CLK_PERIOD 5      // updates this to the core clock period, in ns
+#define ARRAY_LENGTH      100    // number of consecutive high/low durations to be saved
+
+volatile uint32_t cc0_array [ARRAY_LENGTH];
+volatile uint32_t cc1_array [ARRAY_LENGTH];
 volatile uint32_t isr_cc0_count;
 volatile uint32_t isr_cc1_count;
 volatile uint32_t isr_cc0_count_orig;
@@ -16,11 +23,6 @@ volatile uint32_t high_duration;
 volatile uint32_t low_duration;
 volatile uint32_t array_length;
 volatile char     serial_command;
-
-#define SerialUSB Serial    // this is needed for trinket m0
-#define PIN 2               // D2 is PA7, which is odd
-#define CLK_FREQ 200.0      // update this to the core clock frequency, in MHz
-#define SINGLE_CLK_PERIOD 5 // updates this to the core clock period, in ns
 
 void setup()
 {
