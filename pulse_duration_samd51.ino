@@ -17,25 +17,13 @@ volatile uint32_t low_duration;
 volatile uint32_t array_length;
 volatile char     serial_command;
 
-/*#include <Adafruit_DotStar.h>
-
-// There is only one pixel on the board
-#define NUMPIXELS 1 
-
-//Use these pin definitions for the ItsyBitsy M4
-#define DATAPIN    8
-#define CLOCKPIN   6
-
-Adafruit_DotStar strip(NUMPIXELS, DATAPIN, CLOCKPIN, DOTSTAR_BRG);
-*/
-#define SerialUSB Serial // this is needed for trinket m0
-#define PIN 2            // D2 is PA7, which is odd
+#define SerialUSB Serial    // this is needed for trinket m0
+#define PIN 2               // D2 is PA7, which is odd
+#define CLK_FREQ 200.0      // update this to the core clock frequency, in MHz
+#define SINGLE_CLK_PERIOD 5 // updates this to the core clock period, in ns
 
 void setup()
 {
-//  strip.begin();
-//  strip.setBrightness(10);
-  
   SerialUSB.begin(115200);                       // Send data back on the native port
   while(!SerialUSB);                             // Wait for the SerialUSB port to be ready
   
@@ -105,18 +93,18 @@ void loop()
     { 
       isr_cc0_count_orig = isr_cc0_count;
       isr_cc1_count_orig = isr_cc1_count;
-      if (isr_cc0_count > 0)
+      if (isr_cc0_count > 0) // this code is to remove overflow counts
       {
         array_length = isr_cc0_count - 1;
         for ( a=0; a < array_length; a = a + 1 )
         {
-          high_duration = (cc0_array[a] * (1000.0 / 200.0) + 5);
-          if (high_duration > 3900000000)
+          high_duration = (cc0_array[a] * (1000.0 / CLK_FREQ) + SINGLE_CLK_PERIOD);
+          if (high_duration > 3900000000) // values higher than this are probably overflow
             {
               isr_cc0_count--;
               for ( b=a; b < array_length; b = b + 1 )
               {
-                cc0_array[b] = cc0_array[b+1];
+                cc0_array[b] = cc0_array[b+1]; // remove bad array vale
               }
             }
         }
@@ -126,7 +114,7 @@ void loop()
         array_length = isr_cc1_count - 1;
         for ( a=0; a < array_length; a = a + 1 )
         {
-          low_duration = (cc1_array[a] * (1000.0 / 200.0) + 5);
+          low_duration = (cc1_array[a] * (1000.0 / CLK_FREQ) + SINGLE_CLK_PERIOD);
           if (low_duration > 3900000000)
           {
             isr_cc1_count--;
@@ -144,12 +132,12 @@ void loop()
 
       for ( a=0; a < isr_cc0_count; a = a + 1 )
       {
-        high_duration = cc0_array[a] * (1000.0 / 200.0) + 5;
+        high_duration = cc0_array[a] * (1000.0 / CLK_FREQ) + SINGLE_CLK_PERIOD;
         SerialUSB.print("high_duration=");
         SerialUSB.println(high_duration);
         if (a < isr_cc1_count)
         {
-          low_duration = (cc1_array[a] * (1000.0 / 200.0) + 5) - high_duration;
+          low_duration = (cc1_array[a] * (1000.0 / CLK_FREQ) + SINGLE_CLK_PERIOD) - high_duration;
           SerialUSB.print("low_duration=");
           SerialUSB.println(low_duration);
         }
@@ -160,7 +148,7 @@ void loop()
   }
 }
 
-
+// overflow is not checked to allow this to run as fast as possible
 void TC0_Handler()   // Interrupt Service Routine (ISR) for timer TC0
 {
   // Check for match counter 0 (MC0) interrupt
